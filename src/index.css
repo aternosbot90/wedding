@@ -1,0 +1,941 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #EDE6D8;
+  --sheet: #FAF6ED;
+  --ink: #261B12;
+  --gold: #D4AF37;
+  --gold-dark: #9E7B24;
+  --crimson: #7A1522;
+  --marigold: #E6A119;
+  --teal: #0E3540;
+  --rule: rgba(42, 28, 18, 0.85);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --H: min(46vh, 31vw);
+}
+
+@media (max-width: 767px) {
+  :root {
+    --H: min(60vw, 42svh);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: "Marcellus", "Cormorant Garamond", "Noto Serif Devanagari", Georgia, serif;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.lbl {
+  font-family: "Marcellus", "Inter Tight", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 25px;
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  white-space: nowrap;
+  background: rgba(250, 246, 237, 0.6);
+  color: var(--ink);
+  text-decoration: none;
+  transition: all 0.25s var(--ease);
+  cursor: pointer;
+}
+
+.box:hover {
+  background-color: var(--crimson);
+  color: #FAF6ED;
+  border-color: var(--crimson);
+}
+
+/* Paper grain overlay */
+.paper-grain {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 40;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.35;
+}
+
+/* 3D Shelf Stage */
+.shelf-section {
+  position: fixed;
+  left: 0;
+  width: 100vw;
+  top: calc(50% - var(--H) / 2 - 40px);
+  height: calc(var(--H) + 80px);
+  perspective: 2200px;
+  perspective-origin: 50% 50%;
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  overflow: visible;
+}
+
+.shelf-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+.tape {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+  cursor: pointer;
+}
+
+.tape-face {
+  position: absolute;
+  height: var(--H);
+  top: calc(var(--H) * -0.5);
+  backface-visibility: hidden;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tape-face.sp {
+  width: var(--ws);
+  left: calc(var(--ws) * -0.5);
+  transform: translateZ(calc(var(--d) * 0.5));
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4);
+}
+
+.tape-face.cv {
+  width: var(--d);
+  left: calc(var(--d) * -0.5);
+  transform: rotateY(90deg) translateZ(calc(var(--ws) * 0.5));
+  box-shadow: 0 35px 70px -25px rgba(40, 15, 10, 0.65), 0 0 25px rgba(212, 175, 55, 0.15);
+}
+
+.tape-face.cv::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(255, 248, 231, 0.45) 48%,
+    rgba(212, 175, 55, 0.35) 53%,
+    transparent 65%,
+    transparent 100%
+  );
+  background-size: 250% 250%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+  z-index: 5;
+}
+
+.tape:hover .tape-face.cv::before {
+  opacity: 1;
+  animation: coverGleam 2.8s ease-in-out infinite;
+}
+
+@keyframes coverGleam {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.tape-face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: #000000;
+  opacity: var(--shade, 0);
+  pointer-events: none;
+  transition: opacity 0.15s ease-out;
+}
+
+/* Ceremony tabs */
+.decade-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(50% - var(--H) / 2 - 88px);
+  display: flex;
+  align-items: center;
+  height: 25px;
+  z-index: 30;
+  max-width: 95vw;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE & Edge */
+}
+
+.decade-nav::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.decade-btn {
+  position: relative;
+  height: 25px;
+  padding: 0 12px;
+  margin-left: -1px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+  white-space: nowrap;
+  font-family: "Marcellus", "Inter Tight", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  z-index: 2;
+  transition: color 0.45s var(--ease);
+  cursor: pointer;
+}
+
+.decade-btn.active {
+  color: #FAF6ED;
+}
+
+.decade-indicator {
+  position: absolute;
+  top: 0;
+  height: 25px;
+  background-color: var(--crimson);
+  z-index: 1;
+  pointer-events: none;
+  transition: transform 0.6s var(--ease), width 0.6s var(--ease);
+  border-radius: 1px;
+}
+
+/* Play ring */
+.play-ring {
+  position: fixed;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gold);
+  background: rgba(122, 21, 34, 0.9);
+  color: #FAF6ED;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 35;
+  transform: translate(-50%, -50%) scale(0);
+  transform-origin: center center;
+  transition: transform 0.3s var(--ease);
+  box-shadow: 0 6px 16px rgba(122, 21, 34, 0.4);
+  cursor: pointer;
+}
+
+.play-ring svg {
+  transform: translateX(1px);
+}
+
+/* Caption under shelf */
+.caption-container {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(50% + var(--H) / 2 + 28px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 30;
+  width: min(92vw, 780px);
+  text-align: center;
+}
+
+.mask-line {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.caption-title {
+  font-family: "Marcellus", "Noto Serif Devanagari", serif;
+  font-weight: 700;
+  font-size: 29px;
+  line-height: 1.15;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.caption-sub {
+  color: var(--crimson);
+  font-weight: 600;
+  font-family: "Noto Serif Devanagari", serif;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+
+.caption-year {
+  font-family: "Marcellus", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--gold-dark);
+}
+
+/* Arrow buttons */
+.nav-arrow {
+  position: fixed;
+  top: calc(50% + var(--H) / 2 + 38px);
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--rule);
+  background: rgba(250, 246, 237, 0.7);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+
+.nav-arrow:hover {
+  background-color: var(--crimson);
+  color: #FAF6ED;
+  border-color: var(--crimson);
+}
+
+.nav-arrow.left {
+  left: 24px;
+}
+
+.nav-arrow.right {
+  right: 24px;
+}
+
+/* Top bar */
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 84px;
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  z-index: 30;
+}
+
+.brand-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--crimson);
+  text-decoration: none;
+}
+
+.brand-logo-hi {
+  font-family: "Noto Serif Devanagari", serif;
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.brand-logo-en {
+  font-family: "Marcellus", serif;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  line-height: 1;
+  color: var(--gold-dark);
+}
+
+/* Footer */
+.footer-bar {
+  position: fixed;
+  bottom: 22px;
+  left: 32px;
+  right: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 30;
+}
+
+/* 3D Flow Expansion Modal Container */
+.detail-modal {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 60;
+  background: radial-gradient(circle at 50% 50%, rgba(45, 12, 18, 0.96) 0%, rgba(18, 4, 8, 0.99) 100%);
+  visibility: hidden;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Palace Candlelight & Diya Warmth Glow */
+.palace-ambient-glow {
+  position: absolute;
+  inset: -15%;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 40%, rgba(212, 175, 55, 0.16) 0%, rgba(140, 30, 43, 0.08) 50%, transparent 75%);
+  animation: candleFlicker 6.5s ease-in-out infinite;
+  mix-blend-mode: screen;
+  z-index: 10;
+}
+
+@keyframes candleFlicker {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  25% {
+    opacity: 0.97;
+    transform: scale(1.02) translate(1px, -1px);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(0.99) translate(-1px, 1px);
+  }
+  75% {
+    opacity: 0.96;
+    transform: scale(1.015);
+  }
+}
+
+/* Regal 24K Gold Foil Shimmer */
+@keyframes goldFoilShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.gold-foil-text {
+  background: linear-gradient(
+    110deg,
+    #8C6D2B 0%,
+    #D4AF37 25%,
+    #FFF8E7 50%,
+    #D4AF37 75%,
+    #8C6D2B 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldFoilShimmer 5s ease-in-out infinite;
+}
+
+.gold-foil-heading {
+  background: linear-gradient(
+    110deg,
+    #7A1522 0%,
+    #B38A24 25%,
+    #FFF6DF 50%,
+    #B38A24 75%,
+    #7A1522 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldFoilShimmer 6s ease-in-out infinite;
+}
+
+/* Silk Bookmark Ribbon Sway */
+@keyframes ribbonSway {
+  0%, 100% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+  30% {
+    transform: translateX(-50%) rotate(2.2deg);
+  }
+  70% {
+    transform: translateX(-50%) rotate(-1.8deg);
+  }
+}
+
+.bookmark-ribbon {
+  animation: ribbonSway 5s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* Subtle corner curl indicator */
+.corner-curl-hint {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+  z-index: 25;
+  transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  opacity: 0.7;
+}
+
+.corner-curl-hint.right {
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(135deg, transparent 48%, rgba(212, 175, 55, 0.5) 49%, rgba(250, 246, 237, 0.95) 75%);
+  box-shadow: -2px -2px 6px rgba(0, 0, 0, 0.12);
+  border-top-left-radius: 6px;
+}
+
+.corner-curl-hint.left {
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(225deg, transparent 48%, rgba(212, 175, 55, 0.5) 49%, rgba(250, 246, 237, 0.95) 75%);
+  box-shadow: 2px -2px 6px rgba(0, 0, 0, 0.12);
+  border-top-right-radius: 6px;
+}
+
+/* Mobile Single Page Smooth Card Flip Transitions */
+@keyframes mobilePageTurnForward {
+  0% {
+    opacity: 0.6;
+    transform: translateX(24px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0px) scale(1);
+  }
+}
+
+@keyframes mobilePageTurnBackward {
+  0% {
+    opacity: 0.6;
+    transform: translateX(-24px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0px) scale(1);
+  }
+}
+
+.mobile-page-forward {
+  animation: mobilePageTurnForward 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.mobile-page-backward {
+  animation: mobilePageTurnBackward 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Royal Wedding Golden Jewel Cursor */
+.royal-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10000;
+  transform: translate3d(-100px, -100px, 0);
+  will-change: transform;
+}
+
+.cursor-jewel {
+  width: 9px;
+  height: 9px;
+  background: radial-gradient(circle at 35% 35%, #FFF8E7 0%, #D4AF37 55%, #8C6D2B 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.85), 0 0 2px rgba(0, 0, 0, 0.7);
+  transform: translate(-50%, -50%);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.cursor-ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid rgba(212, 175, 55, 0.6);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  opacity: 0.6;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s ease, opacity 0.3s ease;
+}
+
+.cursor-pill {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 3px 9px;
+  background: rgba(122, 21, 34, 0.92);
+  border: 1px solid rgba(212, 175, 55, 0.8);
+  border-radius: 12px;
+  color: #FAF6ED;
+  font-family: 'Marcellus', serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: translateY(4px) scale(0.9);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.royal-cursor.state-open .cursor-jewel {
+  transform: translate(-50%, -50%) scale(1.3);
+}
+
+.royal-cursor.state-open .cursor-ripple {
+  transform: translate(-50%, -50%) scale(1.5);
+  border-color: rgba(212, 175, 55, 0.95);
+  opacity: 1;
+}
+
+.royal-cursor.state-open .cursor-pill {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.royal-cursor.state-spine .cursor-ripple {
+  transform: translate(-50%, -50%) scale(1.15);
+  border-color: rgba(212, 175, 55, 0.75);
+}
+
+.royal-cursor.state-spine .cursor-pill {
+  opacity: 1;
+  transform: translateY(0) scale(0.92);
+  background: rgba(35, 20, 14, 0.92);
+  border-color: rgba(212, 175, 55, 0.7);
+}
+
+/* =========================================================
+   ROYAL 3D BOOK SPREAD & HARDWARE-ACCELERATED PAGE TURN
+   ========================================================= */
+.book-stage-3d {
+  position: relative;
+  perspective: 2400px;
+  transform-style: preserve-3d;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Strictly disable text selection, ghost dragging, and highlight rectangles across the entire book */
+.book-stage-3d,
+.book-stage-3d *:not(input):not(textarea),
+.book-spread-surface,
+.book-spread-surface *:not(input):not(textarea),
+.page-surface,
+.page-surface *:not(input):not(textarea),
+.turning-leaf,
+.turning-leaf *,
+.leaf-face,
+.leaf-face * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+}
+
+/* Eliminate blue highlight rectangles when swiping/dragging across pages */
+.book-stage-3d ::selection,
+.book-spread-surface ::selection,
+.page-surface ::selection,
+.turning-leaf ::selection,
+.leaf-face ::selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* Explicit exception: allow users to type and select text inside RSVP form inputs & textareas */
+.book-stage-3d input,
+.book-stage-3d textarea,
+.page-surface input,
+.page-surface textarea {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+}
+
+.book-stage-3d input::selection,
+.book-stage-3d textarea::selection,
+.page-surface input::selection,
+.page-surface textarea::selection {
+  background: rgba(122, 21, 34, 0.25) !important;
+  color: #1A0B0E !important;
+}
+
+.book-spread-surface {
+  position: relative;
+  display: flex;
+  transform-style: preserve-3d;
+  box-shadow: 0 25px 65px -15px rgba(15, 5, 8, 0.75), 0 0 35px rgba(212, 175, 55, 0.15);
+  border-radius: 4px;
+}
+
+/* Page Surface: Luminous Antique Ivory Silk Parchment with 24K Gold Flecks */
+.page-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #FAF6ED;
+  background-image: url('/assets/textures/parchment_gold_flecks.jpg');
+  background-size: cover;
+  background-position: center;
+  color: #2A1E14;
+  overflow: hidden;
+  box-shadow: inset 0 0 40px rgba(180, 150, 100, 0.12);
+}
+
+/* Authentic Center Crease / Spine Shadow */
+.spine-crease-shadow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 48px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.22) 0%,
+    rgba(0, 0, 0, 0.08) 25%,
+    transparent 45%,
+    rgba(212, 175, 55, 0.35) 50%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.08) 75%,
+    rgba(0, 0, 0, 0.22) 100%
+  );
+  pointer-events: none;
+  z-index: 25;
+}
+
+/* 3D Turning Leaf with Realistic Physical Paper Depth */
+.turning-leaf {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  transform-style: preserve-3d !important;
+  -webkit-transform-style: preserve-3d !important;
+  will-change: transform;
+  z-index: 35;
+}
+
+.leaf-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotateY(0deg) translateZ(1px);
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  background-color: #FAF6ED;
+  background-image: url('/assets/textures/parchment_gold_flecks.jpg');
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 0 40px rgba(180, 150, 100, 0.15);
+}
+
+.leaf-face-back {
+  transform: rotateY(180deg) translateZ(1px);
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  background-color: #FAF6ED;
+  background-image: url('/assets/textures/parchment_gold_flecks.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Bulletproof 50% Midpoint Flip Handovers:
+   Front face stays visible from 0 to 49.9% then hides at 50% (vertical apex).
+   Back face is hidden from 0 to 49.9% then becomes visible at 50% and lands upright.
+   Completely guarantees zero mirrored text on any browser or GPU. */
+@keyframes leafFrontFlip {
+  0% {
+    visibility: visible;
+  }
+  49.9% {
+    visibility: visible;
+  }
+  50% {
+    visibility: hidden;
+  }
+  100% {
+    visibility: hidden;
+  }
+}
+
+@keyframes leafBackFlip {
+  0% {
+    visibility: hidden;
+  }
+  49.9% {
+    visibility: hidden;
+  }
+  50% {
+    visibility: visible;
+  }
+  100% {
+    visibility: visible;
+  }
+}
+
+.turning-leaf .leaf-face:not(.leaf-face-back) {
+  animation: leafFrontFlip 660ms linear forwards;
+}
+
+.turning-leaf .leaf-face-back {
+  animation: leafBackFlip 660ms linear forwards;
+}
+
+/* Global scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(180, 160, 130, 0.4);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(180, 160, 130, 0.7);
+}
+
+.no-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 767px) {
+  :root {
+    --H: min(65vw, 38svh);
+  }
+
+  .top-bar {
+    height: 54px;
+    padding: 0 10px;
+  }
+
+  .brand-logo-hi {
+    font-size: 13.5px;
+  }
+
+  .brand-logo-en {
+    font-size: 7.5px;
+  }
+
+  .shelf-section {
+    top: calc(50% - var(--H) / 2 - 28px);
+    height: calc(var(--H) + 60px);
+  }
+
+  .caption-container {
+    top: calc(50% + var(--H) / 2 + 16px);
+  }
+
+  .caption-title {
+    font-size: 19px;
+  }
+
+  .caption-sub {
+    font-size: 10px;
+  }
+
+  .nav-arrow {
+    width: 38px;
+    height: 38px;
+  }
+
+  .nav-arrow.left {
+    left: 6px;
+  }
+
+  .nav-arrow.right {
+    right: 6px;
+  }
+
+  .footer-bar {
+    left: 12px;
+    right: 12px;
+    bottom: 8px;
+  }
+}
+
+/* Royal Intro Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.45s ease-out forwards;
+}
+
+@keyframes royalPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(212, 175, 55, 0.75), 0 0 50px rgba(122, 21, 34, 0.5);
+  }
+}
+
+.royal-pulse-glow {
+  animation: royalPulseGlow 2.4s ease-in-out infinite;
+}
+
