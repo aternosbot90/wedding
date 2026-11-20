@@ -147,7 +147,12 @@ export const RsvpForm: React.FC<RsvpFormProps> = ({ onSuccess }) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 text-[#2E241B] text-left">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-3 text-[#2E241B] text-left"
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+    >
       {/* Attendance Radio Pills */}
       <div>
         <label className="block text-[10px] uppercase tracking-[0.18em] font-semibold text-[#8C6D2B] mb-1 font-['Marcellus']">

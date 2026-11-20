@@ -189,6 +189,171 @@ class SoundEngine {
   }
 
   /**
+   * Tactile Wooden Shelf Slide Sound
+   * Soft friction glide as books slide across the library shelf
+   */
+  public playShelfSlide() {
+    if (!this.enabled) return;
+    try {
+      this.initCtx();
+      if (!this.ctx) return;
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const duration = 0.36;
+
+      const bufferSize = Math.floor(ctx.sampleRate * duration);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let last = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        data[i] = (last + 0.04 * white) / 1.04;
+        last = data[i];
+        data[i] *= 2.2 * Math.sin((i / bufferSize) * Math.PI);
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(800, now);
+      filter.frequency.linearRampToValueAtTime(1300, now + 0.14);
+      filter.frequency.exponentialRampToValueAtTime(450, now + 0.34);
+      filter.Q.setValueAtTime(2.0, now);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.32, now + 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      noise.start(now);
+      noise.stop(now + 0.36);
+    } catch {}
+  }
+
+  /**
+   * Royal Farman Cloth Paper Scroll Roll-Down Sound
+   * Deep tactile silk parchment friction whoosh followed by resonant settling
+   */
+  public playScrollRoll() {
+    if (!this.enabled) return;
+    try {
+      this.initCtx();
+      if (!this.ctx) return;
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const duration = 0.65;
+
+      const bufferSize = Math.floor(ctx.sampleRate * duration);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let last = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        data[i] = (last + 0.05 * white) / 1.05;
+        last = data[i];
+        const env = Math.sin((i / bufferSize) * Math.PI);
+        data[i] *= 2.6 * env;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(1400, now);
+      filter.frequency.exponentialRampToValueAtTime(320, now + duration);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.48, now + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      noise.start(now);
+      noise.stop(now + duration);
+    } catch {}
+  }
+
+  /**
+   * Realistic Wax Seal Fracture & Crack Sound
+   * Sharp tactile brittle wax fracture snap, followed by crumbles & resonance
+   */
+  public playWaxCrack() {
+    if (!this.enabled) return;
+    try {
+      this.initCtx();
+      if (!this.ctx) return;
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+
+      // 1. Sharp initial brittle fracture snap
+      const snapOsc = ctx.createOscillator();
+      const snapGain = ctx.createGain();
+      snapOsc.type = 'sawtooth';
+      snapOsc.frequency.setValueAtTime(850, now);
+      snapOsc.frequency.exponentialRampToValueAtTime(130, now + 0.08);
+
+      snapGain.gain.setValueAtTime(0.001, now);
+      snapGain.gain.linearRampToValueAtTime(0.75, now + 0.006);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+      snapOsc.connect(snapGain);
+      snapGain.connect(ctx.destination);
+      snapOsc.start(now);
+      snapOsc.stop(now + 0.1);
+
+      // 2. High-frequency crack noise (brittle wax fracturing)
+      const bufferSize = Math.floor(ctx.sampleRate * 0.16);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.03));
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(1900, now);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.65, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.16);
+
+      // 3. Subtle hollow seal pop
+      const popOsc = ctx.createOscillator();
+      const popGain = ctx.createGain();
+      popOsc.type = 'sine';
+      popOsc.frequency.setValueAtTime(240, now + 0.02);
+      popOsc.frequency.exponentialRampToValueAtTime(65, now + 0.18);
+
+      popGain.gain.setValueAtTime(0.001, now + 0.02);
+      popGain.gain.linearRampToValueAtTime(0.4, now + 0.04);
+      popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+      popOsc.connect(popGain);
+      popGain.connect(ctx.destination);
+      popOsc.start(now + 0.02);
+      popOsc.stop(now + 0.2);
+    } catch {}
+  }
+
+  /**
    * Romantic celestial harp chord
    */
   public playCelebrationChime() {

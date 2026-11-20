@@ -6,6 +6,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Heart, Music } from 'lucide-react';
 import { INDIAN_VOLUMES, IndianBookVolume } from './types/wedding';
+import { LoadingScreen } from './components/LoadingScreen';
 import { OpenBook } from './components/OpenBook';
 import { RosePetals } from './components/RosePetals';
 import { RoyalIntro } from './components/RoyalIntro';
@@ -58,13 +59,22 @@ export default function App() {
   const coverFaceRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // State management
+  const [isLoading, setIsLoading] = useState(true);
   const [showIntro, setShowIntro] = useState(true);
+  const showIntroRef = useRef(true);
+  showIntroRef.current = showIntro;
+  const isLoadingRef = useRef(true);
+  isLoadingRef.current = isLoading;
   const [activeBook, setActiveBook] = useState<IndianBookVolume>(INDIAN_VOLUMES[0]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [targetSpread, setTargetSpread] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [petalsActive, setPetalsActive] = useState(true);
   const [isMusicOn, setIsMusicOn] = useState(false);
+
+  // Stable callback refs for touch & pointer listeners inside useEffect
+  const openDetailViewRef = useRef<() => void>(() => {});
+  const onTapeClickRef = useRef<(v: number) => void>(() => {});
 
   // Physical motion engine stored in refs for 60fps rAF
   const stateRef = useRef({
@@ -158,6 +168,7 @@ export default function App() {
     let dragStartT = 0;
     let dragStartTime = 0;
     let hasMoved = false;
+    let lastTapActionTime = 0;
 
     const startShelfDrag = (clientX: number, clientY: number) => {
       if (s.isOpen) return;
@@ -179,7 +190,8 @@ export default function App() {
       const dy = clientY - dragStartY;
       const dist = Math.hypot(dx, dy);
 
-      if (dist > 6) {
+      // Only engage shelf drag when touch/pointer has intentionally moved beyond threshold
+      if (dist > 10) {
         hasMoved = true;
         s.dragMoved = true;
         const itemWidth = Math.max(48, s.ws + s.gap);
@@ -204,49 +216,140 @@ export default function App() {
         } else {
           s.T = Math.round(s.T);
         }
+
+        // Briefly lock dragMoved only after an actual drag to avoid trailing click triggers
+        setTimeout(() => {
+          s.dragMoved = false;
+          hasMoved = false;
+        }, 120);
       } else {
         s.T = Math.round(s.T);
-      }
-
-      // Briefly preserve dragMoved so a trailing tap event doesn't trigger book open after swiping
-      setTimeout(() => {
+        // Direct tap with no drag movement -> immediately allow tap action
         s.dragMoved = false;
         hasMoved = false;
-      }, 120);
+      }
+    };
+
+    // Robust Tap Detection & Dispatcher for Mobile Responsive Touch
+    const handleShelfTap = (tapX: number, tapY: number) => {
+      // Guard: Never handle shelf tap if intro is showing, loading is active, or book is already open
+      if (showIntroRef.current || isLoadingRef.current || s.isOpen) return;
+      const now = performance.now();
+      if (now - lastTapActionTime < 350) return;
+      lastTapActionTime = now;
+
+      // 1. If tap was on a UI control, let it handle its own event
+      const hitEl = document.elementFromPoint(tapX, tapY);
+      if (hitEl?.closest('.royal-intro, [data-royal-intro], button, nav, header, footer, .detail-modal, input, select')) {
+        return;
+      }
+
+      // 2. Check if hitEl is inside a book element with data-tape-index
+      const tapeEl = hitEl?.closest('[data-tape-index]');
+      if (tapeEl) {
+        const v = parseInt(tapeEl.getAttribute('data-tape-index') || '-1', 10);
+        if (v >= 0) {
+          onTapeClickRef.current(v);
+          return;
+        }
+      }
+
+      // 3. Robust Geometric Hit Detection (failsafe when 3D CSS transforms confuse browser hit-testing)
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      const shelfCenterY = H * 0.5;
+      const shelfCenterX = W * 0.5;
+
+      const dyFromCenter = Math.abs(tapY - shelfCenterY);
+      const dxFromCenter = Math.abs(tapX - shelfCenterX);
+
+      const shelfVerticalLimit = Math.max(s.H * 0.65, 160);
+      if (dyFromCenter <= shelfVerticalLimit) {
+        // Front-facing book bounds (cover width s.d is typically ~160-260px on mobile)
+        const frontBookHalfWidth = Math.max(s.d * 0.62, 115);
+
+        if (dxFromCenter <= frontBookHalfWidth) {
+          // Tap directly on the front-facing book -> OPEN IT!
+          openDetailViewRef.current();
+        } else {
+          // Tap on side book spine -> slide to face that book
+          sound.playShelfSlide();
+          if (tapX < shelfCenterX) {
+            const distFromEdge = tapX - (shelfCenterX - frontBookHalfWidth);
+            const shift = Math.min(-1, Math.round(distFromEdge / (s.ws + s.gap)));
+            s.T = Math.round(s.s) + shift;
+          } else {
+            const distFromEdge = tapX - (shelfCenterX + frontBookHalfWidth);
+            const shift = Math.max(1, Math.round(distFromEdge / (s.ws + s.gap)));
+            s.T = Math.round(s.s) + shift;
+          }
+        }
+      }
     };
 
     const onPointerMove = (e: PointerEvent) => {
+      if (showIntroRef.current || isLoadingRef.current) return;
       moveShelfDrag(e.clientX, e.clientY);
     };
 
     const onPointerUp = (e: PointerEvent) => {
+      if (showIntroRef.current || isLoadingRef.current || s.isOpen) return;
+      const target = e.target as HTMLElement;
+      if (target?.closest && target.closest('.royal-intro, [data-royal-intro], .detail-modal, button')) return;
+
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      const dist = Math.hypot(dx, dy);
+      const dt = performance.now() - dragStartTime;
+      const isTap = !hasMoved && dist < 14 && dt < 450;
+
       endShelfDrag(e.clientX);
+
+      if (isTap && (e.pointerType === 'touch' || e.pointerType === 'pen')) {
+        handleShelfTap(e.clientX, e.clientY);
+      }
     };
 
     const onTouchStart = (e: TouchEvent) => {
-      if (s.isOpen || e.touches.length !== 1) return;
+      if (showIntroRef.current || isLoadingRef.current || s.isOpen || e.touches.length !== 1) return;
       const target = e.target as HTMLElement;
-      if (target.closest('button, nav, header, footer, .detail-modal, input, select')) return;
+      if (target?.closest && target.closest('.royal-intro, [data-royal-intro], button, nav, header, footer, .detail-modal, input, select')) return;
       const t = e.touches[0];
       startShelfDrag(t.clientX, t.clientY);
     };
 
     const onTouchMove = (e: TouchEvent) => {
+      if (showIntroRef.current || isLoadingRef.current) return;
       if (!s.isDragging || e.touches.length !== 1) return;
       const t = e.touches[0];
       const dx = t.clientX - dragStartX;
       const dy = t.clientY - dragStartY;
 
-      // When dragging horizontally, prevent browser horizontal page swipe and glide books
-      if (Math.abs(dx) > Math.abs(dy) * 0.65 && Math.abs(dx) > 5) {
+      // When dragging horizontally beyond threshold, prevent browser horizontal page swipe and glide books
+      if (Math.abs(dx) > Math.abs(dy) * 0.65 && Math.abs(dx) > 10) {
         if (e.cancelable) e.preventDefault();
         moveShelfDrag(t.clientX, t.clientY);
       }
     };
 
     const onTouchEnd = (e: TouchEvent) => {
-      const touch = e.changedTouches[0];
-      endShelfDrag(touch ? touch.clientX : undefined);
+      if (showIntroRef.current || isLoadingRef.current || s.isOpen) return;
+      const target = e.target as HTMLElement;
+      if (target?.closest && target.closest('.royal-intro, [data-royal-intro], .detail-modal, button')) return;
+
+      const touch = e.changedTouches[0] || e.touches[0];
+      if (!touch) return;
+      const dx = touch.clientX - dragStartX;
+      const dy = touch.clientY - dragStartY;
+      const dist = Math.hypot(dx, dy);
+      const dt = performance.now() - dragStartTime;
+      const isTap = !hasMoved && dist < 14 && dt < 450;
+
+      endShelfDrag(touch.clientX);
+
+      if (isTap) {
+        handleShelfTap(touch.clientX, touch.clientY);
+      }
     };
 
     window.addEventListener('pointermove', onPointerMove, { passive: true });
@@ -260,7 +363,7 @@ export default function App() {
 
     // Wheel scrolling
     const onWheel = (e: WheelEvent) => {
-      if (s.isOpen) return;
+      if (showIntroRef.current || isLoadingRef.current || s.isOpen) return;
       const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       s.T += (delta / (s.ws + s.gap)) * 0.5;
 
@@ -272,6 +375,7 @@ export default function App() {
 
     // Keyboard navigation
     const onKeyDown = (e: KeyboardEvent) => {
+      if (showIntroRef.current || isLoadingRef.current) return;
       if (s.isOpen) {
         if (e.key === 'Escape') closeDetailView();
         return;
@@ -414,7 +518,7 @@ export default function App() {
       s.cy += (s.my - s.cy) * (1 - Math.exp(-16 * dt));
 
       if (cursorRef.current) {
-        if (s.isOpen) {
+        if (s.isOpen || W < 768) {
           cursorRef.current.style.display = 'none';
         } else {
           cursorRef.current.style.display = 'block';
@@ -432,10 +536,7 @@ export default function App() {
               cursorPillTextRef.current.textContent = 'देखें • SELECT';
             }
           } else {
-            const elemUnder = document.elementFromPoint(s.mx, s.my);
-            if (elemUnder && elemUnder.closest('button, a')) {
-              nextCursorState = 'btn';
-            }
+            nextCursorState = 'default';
           }
 
           if (nextCursorState !== s.cursorState) {
@@ -448,15 +549,20 @@ export default function App() {
         }
       }
 
-      // Update Play Ring
+      // Update Play Ring (Desktop only; hidden on mobile)
       if (playRingRef.current) {
-        const ringLeft = W / 2 - 0.5 * s.d - 8;
-        const ringTop = shelfCenterY + 0.36 * s.H;
-        playRingRef.current.style.left = `${ringLeft.toFixed(1)}px`;
-        playRingRef.current.style.top = `${ringTop.toFixed(1)}px`;
+        if (s.isOpen || W < 768) {
+          playRingRef.current.style.display = 'none';
+        } else {
+          playRingRef.current.style.display = 'flex';
+          const ringLeft = W / 2 - 0.5 * s.d - 8;
+          const ringTop = shelfCenterY + 0.36 * s.H;
+          playRingRef.current.style.left = `${ringLeft.toFixed(1)}px`;
+          playRingRef.current.style.top = `${ringTop.toFixed(1)}px`;
 
-        const ringScale = s.isOpen ? 0 : smoothstep(Math.max(0, 1 - Math.abs(s.T - s.s) * 3));
-        playRingRef.current.style.transform = `translate(-50%, -50%) scale(${ringScale.toFixed(3)})`;
+          const ringScale = smoothstep(Math.max(0, 1 - Math.abs(s.T - s.s) * 3));
+          playRingRef.current.style.transform = `translate(-50%, -50%) scale(${ringScale.toFixed(3)})`;
+        }
       }
 
       // Render each of the 40 tapes (books)
@@ -524,6 +630,9 @@ export default function App() {
     };
   }, []);
 
+  // Track last tap click timestamp to avoid duplicate calls across touch, pointer, and click
+  let lastTapClickTime = 0;
+
   // FLOWING BOOK OPENING (Smooth Royal Bloom & Scale - No flash, No clip-path jerk)
   const openDetailView = () => {
     const s = stateRef.current;
@@ -531,7 +640,9 @@ export default function App() {
     s.isOpen = true;
     s.T = Math.round(s.s);
 
-    const vol = INDIAN_VOLUMES[s.activeBookIndex];
+    const activeIdx = ((Math.round(s.s) % 8) + 8) % 8;
+    s.activeBookIndex = activeIdx;
+    const vol = INDIAN_VOLUMES[activeIdx];
     setActiveBook(vol);
     setTargetSpread(vol.targetSpread);
     setIsModalOpen(true);
@@ -544,6 +655,7 @@ export default function App() {
 
     detailEl.style.transformOrigin = '50% 50%';
     detailEl.style.visibility = 'visible';
+    detailEl.style.opacity = '1';
 
     // Hardware-accelerated smooth scale bloom and fade into view
     detailEl.animate(
@@ -564,6 +676,7 @@ export default function App() {
       }
     );
   };
+  openDetailViewRef.current = openDetailView;
 
   // FLOWING BOOK CLOSING (Smooth gentle ease-down back into shelf view)
   const closeDetailView = () => {
@@ -604,20 +717,41 @@ export default function App() {
     };
   };
 
-  // Direct Book Interaction:
-  // Tapping ANY book opens that ceremony volume immediately without needing to click only on the play button!
+  /**
+   * Two-Step Shelf Book Interaction:
+   * 1. Clicking a SIDE book/spine -> slides the shelf to that book and faces it front.
+   * 2. Clicking the FRONT-FACING book -> opens it like a book!
+   */
   const onTapeClick = (v: number) => {
     const s = stateRef.current;
     if (s.dragMoved) return;
 
-    const volIdx = ((v % 8) + 8) % 8;
-    s.activeBookIndex = volIdx;
-    const vol = INDIAN_VOLUMES[volIdx];
-    setActiveBook(vol);
-    setTargetSpread(vol.targetSpread);
+    const now = performance.now();
+    if (now - lastTapClickTime < 350) return;
+    lastTapClickTime = now;
 
-    openDetailView();
+    // Calculate signed distance of book v from current shelf position s.s
+    let r = (v - s.s) % TOTAL_TAPES;
+    if (r > TOTAL_TAPES / 2) r -= TOTAL_TAPES;
+    if (r < -TOTAL_TAPES / 2) r += TOTAL_TAPES;
+
+    const isFacingFront = Math.abs(r) < 0.45;
+
+    if (isFacingFront) {
+      // 1. CLICK ON THE BOOK FACING FRONT -> OPEN IT LIKE A BOOK!
+      const volIdx = ((v % 8) + 8) % 8;
+      s.activeBookIndex = volIdx;
+      const vol = INDIAN_VOLUMES[volIdx];
+      setActiveBook(vol);
+      setTargetSpread(vol.targetSpread);
+      openDetailView();
+    } else {
+      // 2. CLICK ON A SIDE BOOK -> TAKE TO THAT BOOK AND FACE THE BOOK!
+      sound.playShelfSlide();
+      s.T = Math.round(s.s + r);
+    }
   };
+  onTapeClickRef.current = onTapeClick;
 
   const onTabClick = (tab: (typeof CEREMONY_TABS)[0]) => {
     const s = stateRef.current;
@@ -715,7 +849,7 @@ export default function App() {
             onClick={() => setShowIntro(true)}
             title="Replay Royal Farman Invitation"
           >
-            ✦ आमंत्रण
+            आमंत्रण
           </button>
         </div>
 
@@ -745,18 +879,18 @@ export default function App() {
             </span>
           </button>
 
-          {/* Phoolon Ki Varsha */}
+          {/* Sakura & Phoolon Ki Varsha */}
           <button
             type="button"
             onClick={() => {
               sound.playCelebrationChime();
               triggerPetalShower();
             }}
-            title="Phoolon Ki Varsha"
+            title="Sakura Petals Shower"
             className="p-1.5 sm:px-3 sm:py-1.5 border border-[#D4AF37]/70 bg-[#FAF6EE]/90 hover:bg-[#7A1522] hover:text-[#FAF6ED] text-[#7A1522] rounded-full text-xs font-['Marcellus'] font-semibold transition-all cursor-pointer shadow-md hover:scale-105 flex items-center gap-1.5"
           >
             <Heart className="w-3.5 h-3.5 fill-current text-[#D9384B]" />
-            <span className="hidden sm:inline text-[9.5px] uppercase font-semibold">Varsha</span>
+            <span className="hidden sm:inline text-[9.5px] uppercase font-semibold">Sakura</span>
           </button>
         </div>
       </header>
@@ -784,6 +918,19 @@ export default function App() {
         className="shelf-section"
         aria-label="Royal wedding keepsake shelf"
         onPointerDown={onShelfPointerDown}
+        onClick={(e) => {
+          if (stateRef.current.dragMoved) return;
+          const target = e.target as HTMLElement;
+          if (target.closest('button, nav, header, footer, .detail-modal, input, select')) return;
+          const W = window.innerWidth;
+          const H = window.innerHeight;
+          const dx = Math.abs(e.clientX - W * 0.5);
+          const dy = Math.abs(e.clientY - H * 0.5);
+          const s = stateRef.current;
+          if (dx <= Math.max(s.d * 0.62, 115) && dy <= Math.max(s.H * 0.65, 160)) {
+            openDetailView();
+          }
+        }}
       >
         <div ref={stageRef} className="shelf-stage">
           {Array.from({ length: TOTAL_TAPES }).map((_, v) => {
@@ -794,6 +941,7 @@ export default function App() {
                 ref={(el) => {
                   tapeRefs.current[v] = el;
                 }}
+                data-tape-index={v}
                 className="tape"
                 onClick={() => onTapeClick(v)}
                 onPointerEnter={() => {
@@ -810,6 +958,7 @@ export default function App() {
                   ref={(el) => {
                     spineFaceRefs.current[v] = el;
                   }}
+                  data-tape-index={v}
                   className="tape-face sp flex flex-col justify-between items-center py-4 px-1 border-r border-[#1C140D] shadow-lg"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -817,32 +966,42 @@ export default function App() {
                   }}
                   style={{
                     backgroundColor: vol.spineColor,
-                    backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.65) 100%), url('${vol.spineTexture}')`,
+                    backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.2) 25%, rgba(255,255,255,0.22) 50%, rgba(0,0,0,0.2) 75%, rgba(0,0,0,0.7) 100%), url('${vol.spineTexture}')`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                   }}
                 >
                   {/* Top Auspicious Ganesha Emblem */}
-                  <div className="flex flex-col items-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                    <span className="text-[7.5px] font-['Noto_Serif_Devanagari'] font-bold text-[#FFF2D1] tracking-widest text-center leading-tight">
+                  <div className="flex flex-col items-center drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                    <span className="text-[8px] font-['Noto_Serif_Devanagari'] font-bold text-[#FFF3D4] tracking-widest text-center leading-tight">
                       ॥ ॐ ॥
                     </span>
                     <div className="w-5 h-[1.5px] bg-[#F5DE98] my-1 shadow-sm" />
                   </div>
 
-                  {/* Vertical Calligraphy Title */}
+                  {/* Vertical Calligraphy Title with dark contrast backing ribbon */}
                   <div
-                    className="flex-1 flex items-center justify-center py-2"
-                    style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                    className="flex-1 flex items-center justify-center py-2 px-0.5 my-1 w-full"
+                    style={{
+                      writingMode: 'vertical-rl',
+                      transform: 'rotate(180deg)',
+                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.35) 100%)',
+                      borderRadius: '2px',
+                    }}
                   >
-                    <span className="font-['Marcellus'] font-bold text-[11px] sm:text-[12px] tracking-[0.24em] text-[#FFF6DF] uppercase drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                    <span
+                      className="font-['Marcellus'] font-bold text-[11.5px] sm:text-[12.5px] tracking-[0.24em] text-[#FFF8E7] uppercase"
+                      style={{
+                        textShadow: '0 2px 5px rgba(0,0,0,0.95), 0 0 10px rgba(0,0,0,0.85)',
+                      }}
+                    >
                       {vol.title}
                     </span>
                   </div>
 
                   {/* Bottom Auspicious Date */}
-                  <div className="text-center pt-1 border-t border-[#F5DE98]/50 w-4/5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                    <span className="font-['Marcellus'] text-[8px] font-semibold tracking-wider text-[#FFF0C7]">
+                  <div className="text-center pt-1 border-t border-[#F5DE98]/50 w-4/5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                    <span className="font-['Marcellus'] text-[8px] font-bold tracking-wider text-[#FFF2CC]">
                       NOV 2026
                     </span>
                   </div>
@@ -853,14 +1012,19 @@ export default function App() {
                   ref={(el) => {
                     coverFaceRefs.current[v] = el;
                   }}
-                  className="tape-face cv flex flex-col justify-between p-5 border-l-4 border-[#1A120B] shadow-2xl"
+                  data-tape-index={v}
+                  className="tape-face cv flex flex-col justify-between p-4 sm:p-5 border-l-4 border-[#1A120B] shadow-2xl cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (stateRef.current.dragMoved) return;
                     onTapeClick(v);
                   }}
                   style={{
                     backgroundColor: vol.spineColor,
-                    backgroundImage: `radial-gradient(circle at 50% 30%, rgba(255,255,255,0.22) 0%, transparent 65%), linear-gradient(135deg, rgba(0,0,0,0.3) 0%, transparent 100%), url('${vol.coverTexture}')`,
+                    backgroundImage: `
+                      radial-gradient(circle at 50% 50%, rgba(25, 5, 10, 0.42) 0%, rgba(12, 2, 5, 0.75) 100%),
+                      url('${vol.coverTexture}')
+                    `,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                   }}
@@ -874,38 +1038,62 @@ export default function App() {
                     <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 border-b-2 border-r-2 border-[#FFF2D1]" />
                   </div>
 
-                  {/* Top Ganesha Blessing */}
-                  <div className="relative text-center pt-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                    <span className="font-['Noto_Serif_Devanagari'] text-[8.5px] font-bold text-[#FFF2D1] tracking-widest block">
-                      ॥ श्री गणेशाय नमः ॥
-                    </span>
-                    <span className="font-['Marcellus'] text-[7.5px] uppercase tracking-[0.25em] text-[#F5DE98] block mt-0.5">
-                      {vol.volumeNumber}
-                    </span>
+                  {/* Top Auspicious Pill Badge */}
+                  <div className="relative text-center pt-0.5 flex flex-col items-center">
+                    <div className="inline-flex flex-col items-center px-3 py-1 rounded-full bg-[#1A0B0E]/88 border border-[#D4AF37]/70 shadow-md backdrop-blur-sm">
+                      <span className="font-['Noto_Serif_Devanagari'] text-[8.5px] font-bold text-[#FFF3D4] tracking-widest block leading-tight">
+                        ॥ श्री गणेशाय नमः ॥
+                      </span>
+                      <span className="font-['Marcellus'] text-[7.5px] uppercase tracking-[0.25em] text-[#F5DE98] block font-semibold mt-0.5">
+                        {vol.volumeNumber}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Center Royal Monogram */}
-                  <div className="relative flex flex-col items-center justify-center my-auto drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                    <div className="w-12 h-12 rounded-full border-2 border-[#F5DE98] flex items-center justify-center bg-black/40 shadow-inner">
-                      <span className="font-['Marcellus'] text-sm font-bold text-[#FFF6DF] tracking-wider">
+                  {/* Center Royal Cartouche Inlay Plate (High contrast over ANY background texture) */}
+                  <div
+                    className="relative flex flex-col items-center justify-center my-auto w-full max-w-[92%] py-3 px-3 rounded-xl border border-[#D4AF37]/80 shadow-[0_8px_24px_rgba(0,0,0,0.85),inset_0_0_12px_rgba(0,0,0,0.6)] backdrop-blur-md mx-auto"
+                    style={{
+                      background: 'radial-gradient(circle at 50% 35%, rgba(42, 9, 16, 0.94) 0%, rgba(18, 4, 8, 0.96) 90%)',
+                    }}
+                  >
+                    {/* Delicate Inner Gold Hairline Frame */}
+                    <div className="absolute inset-1 rounded-lg border border-[#F5DE98]/35 pointer-events-none" />
+
+                    {/* Monogram Roundel */}
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 border-[#D4AF37] flex items-center justify-center bg-[#FAF4E5] shadow-md mb-1.5">
+                      <span className="font-['Marcellus'] text-sm sm:text-base font-bold gold-foil-text">
                         अ & इ
                       </span>
                     </div>
 
-                    <h2 className="font-['Marcellus'] text-xs font-bold text-[#FFF8E7] tracking-[0.16em] text-center mt-2.5 uppercase leading-tight">
+                    <h2
+                      className="font-['Marcellus'] text-xs sm:text-[13px] font-bold text-[#FFF4D4] tracking-[0.18em] text-center uppercase leading-tight my-0.5"
+                      style={{
+                        textShadow: '0 2px 6px rgba(0,0,0,0.95), 0 0 10px rgba(212,175,55,0.4)',
+                      }}
+                    >
                       {vol.title}
                     </h2>
 
-                    <p className="font-['Noto_Serif_Devanagari'] text-[9px] text-[#F5DE98] text-center mt-1 font-semibold">
+                    <p className="font-['Noto_Serif_Devanagari'] text-[9.5px] sm:text-[10px] text-[#F5DE98] text-center font-bold tracking-wider mt-0.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
                       {vol.hindiTitle}
                     </p>
+
+                    <div className="w-16 h-[1px] bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent my-1" />
+
+                    <span className="font-['Marcellus'] text-[7.5px] sm:text-[8px] uppercase tracking-[0.22em] text-[#FFE8B6] font-semibold text-center">
+                      {vol.subtitle}
+                    </span>
                   </div>
 
-                  {/* Bottom Udaipur Heritage Tag */}
-                  <div className="relative text-center pb-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                    <span className="font-['Marcellus'] text-[8px] tracking-[0.2em] text-[#FFF0C7] font-semibold">
-                      UDAIPUR • 28–30 NOV 2026
-                    </span>
+                  {/* Bottom Udaipur Heritage Tag Badge */}
+                  <div className="relative text-center pb-0.5 flex justify-center">
+                    <div className="inline-block px-3 py-0.5 rounded-full bg-[#1A0B0E]/88 border border-[#D4AF37]/65 shadow-md backdrop-blur-sm">
+                      <span className="font-['Marcellus'] text-[8px] sm:text-[8.5px] tracking-[0.2em] text-[#FFF2CC] font-bold">
+                        UDAIPUR • 28–30 NOV 2026
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -982,7 +1170,7 @@ export default function App() {
       </footer>
 
       {/* Royal Wedding Golden Jewel Cursor (Active on Shelf View Only) */}
-      {!isModalOpen && !showIntro && (
+      {!isModalOpen && !showIntro && !isLoading && (
         <div ref={cursorRef} className="royal-cursor" aria-hidden="true">
           <div className="cursor-jewel" />
           <div className="cursor-ripple" />
@@ -1018,7 +1206,7 @@ export default function App() {
       </div>
 
       {/* ROYAL WEDDING FARMAN & WAX-SEAL INTRO SCREEN */}
-      {showIntro && (
+      {showIntro && !isLoading && (
         <RoyalIntro
           onComplete={() => setShowIntro(false)}
           onTriggerPetals={triggerPetalShower}
@@ -1029,6 +1217,11 @@ export default function App() {
             sound.enabled = nextState;
           }}
         />
+      )}
+
+      {/* ROYAL PALACE PRELOADER & ASSET DOWNLOAD SCREEN */}
+      {isLoading && (
+        <LoadingScreen onLoaded={() => setIsLoading(false)} />
       )}
     </div>
   );

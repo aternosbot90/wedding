@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-interface Petal {
+interface SakuraItem {
   x: number;
   y: number;
   size: number;
@@ -8,11 +8,18 @@ interface Petal {
   speedX: number;
   rotation: number;
   rotationSpeed: number;
-  color: string;
+  baseColor: string;
+  midColor: string;
+  tipColor: string;
   opacity: number;
   flip: number;
   flipSpeed: number;
-  type: 'rose' | 'marigold' | 'jasmine';
+  roll: number;
+  rollSpeed: number;
+  swayPhase: number;
+  swaySpeed: number;
+  swayWidth: number;
+  type: 'sakura-petal' | 'sakura-leaf';
 }
 
 interface GoldenSparkle {
@@ -26,16 +33,21 @@ interface GoldenSparkle {
   pulsePhase: number;
 }
 
-// Royal Indian Wedding Floral Palette: Crimson Rose, Saffron Marigold, White Mogra
-const FLORAL_PALETTE = [
-  { type: 'rose' as const, color: '#C81E32' }, // Sindoor Crimson Rose
-  { type: 'rose' as const, color: '#E02B43' }, // Fresh Red Rose
-  { type: 'rose' as const, color: '#8F1122' }, // Velvet Maroon
-  { type: 'marigold' as const, color: '#F7941D' }, // Saffron Genda
-  { type: 'marigold' as const, color: '#FFB800' }, // Golden Yellow Marigold
-  { type: 'marigold' as const, color: '#E57C00' }, // Deep Kesari Orange
-  { type: 'jasmine' as const, color: '#FFFDF7' }, // White Mogra / Jasmine
-  { type: 'jasmine' as const, color: '#FDF7EB' }, // Cream Jasmine
+// Authentic Sakura Tree Palette:
+// Soft Sakura Petals (blush pinks, rosy tints, translucent tips) & Fresh Spring Leaves
+const SAKURA_PETAL_PALETTES = [
+  { base: '#E86F88', mid: '#FF9EB1', tip: '#FFF0F5' }, // Classic Spring Sakura
+  { base: '#F07D94', mid: '#FFADC0', tip: '#FFFFFF' }, // Radiant Pink Blossom
+  { base: '#D64E6C', mid: '#F78CA4', tip: '#FFE4E8' }, // Deeper Cherry Blossom
+  { base: '#FF8FAB', mid: '#FFC2D1', tip: '#FFF5F7' }, // Soft Pastel Sakura
+  { base: '#F38198', mid: '#FFBAC8', tip: '#FFFFFF' }, // Translucent White-Pink
+  { base: '#C73656', mid: '#E86681', tip: '#FFD9E2' }, // Imperial Crimson Sakura
+];
+
+const SAKURA_LEAF_PALETTES = [
+  { base: '#4E7429', mid: '#6F993E', tip: '#9BC060' }, // Tender Spring Green Leaf
+  { base: '#5D7C2F', mid: '#7B9B42', tip: '#ADC86E' }, // Fresh Olive Bronze Leaf
+  { base: '#466827', mid: '#668E37', tip: '#8DB855' }, // Young Sakura Tree Leaf
 ];
 
 export const RosePetals: React.FC<{ active?: boolean }> = ({ active = true }) => {
@@ -60,7 +72,7 @@ export const RosePetals: React.FC<{ active?: boolean }> = ({ active = true }) =>
     };
     window.addEventListener('resize', onResize);
 
-    // Track mouse movement for interactive breeze swirl
+    // Track mouse & touch air currents to swirl sakura petals interactively
     const onPointerMove = (e: PointerEvent) => {
       const m = mouseRef.current;
       m.vx = e.clientX - m.lastX;
@@ -72,50 +84,61 @@ export const RosePetals: React.FC<{ active?: boolean }> = ({ active = true }) =>
     };
     window.addEventListener('pointermove', onPointerMove, { passive: true });
 
-    // 52 lush floral petals
-    const petals: Petal[] = Array.from({ length: 52 }).map(() => {
-      const item = FLORAL_PALETTE[Math.floor(Math.random() * FLORAL_PALETTE.length)];
+    // 58 Sakura petals & spring leaves (approx 85% notched petals, 15% fresh leaves)
+    const items: SakuraItem[] = Array.from({ length: 58 }).map((_, idx) => {
+      const isLeaf = idx % 7 === 0; // ~14% leaves, 86% petals
+      const palette = isLeaf
+        ? SAKURA_LEAF_PALETTES[Math.floor(Math.random() * SAKURA_LEAF_PALETTES.length)]
+        : SAKURA_PETAL_PALETTES[Math.floor(Math.random() * SAKURA_PETAL_PALETTES.length)];
+
       return {
         x: Math.random() * width,
         y: Math.random() * (height + 200) - 200,
-        size: item.type === 'jasmine' ? Math.random() * 8 + 8 : Math.random() * 15 + 11,
-        speedY: Math.random() * 1.6 + 1.1,
-        speedX: Math.random() * 1.4 - 0.7,
+        size: isLeaf ? Math.random() * 10 + 13 : Math.random() * 12 + 13, // 13-25px
+        speedY: isLeaf ? Math.random() * 1.3 + 1.0 : Math.random() * 1.1 + 0.75, // Light, floating descent
+        speedX: Math.random() * 1.2 - 0.6,
         rotation: Math.random() * 360,
-        rotationSpeed: (Math.random() - 0.5) * 2.2,
-        color: item.color,
-        opacity: item.type === 'jasmine' ? Math.random() * 0.3 + 0.65 : Math.random() * 0.35 + 0.65,
+        rotationSpeed: (Math.random() - 0.5) * 1.8,
+        baseColor: palette.base,
+        midColor: palette.mid,
+        tipColor: palette.tip,
+        opacity: Math.random() * 0.28 + 0.72,
         flip: Math.random() * Math.PI,
-        flipSpeed: Math.random() * 0.04 + 0.018,
-        type: item.type,
+        flipSpeed: Math.random() * 0.035 + 0.015,
+        roll: Math.random() * Math.PI,
+        rollSpeed: Math.random() * 0.025 + 0.01,
+        swayPhase: Math.random() * Math.PI * 2,
+        swaySpeed: Math.random() * 0.02 + 0.012,
+        swayWidth: Math.random() * 1.8 + 1.0,
+        type: isLeaf ? 'sakura-leaf' : 'sakura-petal',
       };
     });
 
-    // 36 Golden Stardust Sparkles floating like sunlight through Udaipur palace arches
-    const sparkles: GoldenSparkle[] = Array.from({ length: 36 }).map(() => ({
+    // 32 Golden Stardust Sparkles floating like soft sunlight filtered through sakura branches
+    const sparkles: GoldenSparkle[] = Array.from({ length: 32 }).map(() => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      radius: Math.random() * 1.8 + 0.8,
-      alpha: Math.random() * 0.7 + 0.3,
-      speedY: Math.random() * 0.45 + 0.15,
-      speedX: (Math.random() - 0.5) * 0.5,
+      radius: Math.random() * 1.6 + 0.7,
+      alpha: Math.random() * 0.65 + 0.35,
+      speedY: Math.random() * 0.4 + 0.12,
+      speedX: (Math.random() - 0.5) * 0.4,
       pulseSpeed: Math.random() * 0.03 + 0.015,
       pulsePhase: Math.random() * Math.PI * 2,
     }));
 
     let time = 0;
     const render = () => {
-      time += 0.015;
+      time += 0.016;
       ctx.clearRect(0, 0, width, height);
 
-      // Gentle horizontal atmospheric oscillation
-      const breeze = Math.sin(time) * 1.2;
+      // Atmospheric wind drift
+      const generalBreeze = Math.sin(time * 0.8) * 1.4 + 0.4; // slight gentle rightward drift
       const m = mouseRef.current;
 
-      // 1. Render Golden Stardust
+      // 1. Render Golden Sunlight Stardust
       sparkles.forEach((s) => {
         s.y += s.speedY;
-        s.x += s.speedX + Math.sin(s.pulsePhase + time * 0.8) * 0.3;
+        s.x += s.speedX + Math.sin(s.pulsePhase + time * 0.7) * 0.25;
         s.pulsePhase += s.pulseSpeed;
 
         if (s.y > height + 20) {
@@ -128,72 +151,121 @@ export const RosePetals: React.FC<{ active?: boolean }> = ({ active = true }) =>
         ctx.save();
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(245, 218, 140, ${currentAlpha.toFixed(2)})`;
-        ctx.shadowColor = 'rgba(212, 175, 55, 0.75)';
+        ctx.fillStyle = `rgba(255, 228, 160, ${currentAlpha.toFixed(2)})`;
+        ctx.shadowColor = 'rgba(255, 215, 120, 0.85)';
         ctx.shadowBlur = 6;
         ctx.fill();
         ctx.restore();
       });
 
-      // 2. Render Petals with Dynamic Interactive Air Currents
-      petals.forEach((p) => {
-        // Mouse turbulence wake
+      // 2. Render Falling Sakura Petals & Spring Leaves
+      items.forEach((p) => {
+        // Interactive Mouse/Touch Wake Turbulence
         const dx = p.x - m.x;
         const dy = p.y - m.y;
         const dist = Math.hypot(dx, dy);
-        if (dist < 140 && dist > 1) {
-          const force = (1 - dist / 140) * 2.8;
+        if (dist < 150 && dist > 1) {
+          const force = (1 - dist / 150) * 3.2;
           p.x += (dx / dist) * force;
           p.y += (dy / dist) * force * 0.6;
-          p.rotationSpeed += (Math.random() - 0.5) * 0.4;
+          p.rotationSpeed += (Math.random() - 0.5) * 0.5;
         }
 
+        // Falling kinematics with hira-hira sway
         p.y += p.speedY;
-        p.x += Math.sin(p.y * 0.008 + time) * 1.2 + p.speedX + breeze * 0.5;
+        p.swayPhase += p.swaySpeed;
+        p.x += Math.sin(p.swayPhase) * p.swayWidth + p.speedX + generalBreeze * 0.6;
         p.rotation += p.rotationSpeed;
         p.flip += p.flipSpeed;
+        p.roll += p.rollSpeed;
 
+        // Reset when falling beyond bottom of screen
         if (p.y > height + 40) {
-          p.y = -35;
+          p.y = -40;
           p.x = Math.random() * width;
         }
 
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate((p.rotation * Math.PI) / 180);
-        ctx.scale(1, Math.cos(p.flip));
 
-        ctx.beginPath();
-        if (p.type === 'marigold') {
-          // Marigold elongated petal with ruffled tip
-          ctx.ellipse(0, 0, p.size * 0.45, p.size * 0.9, 0, 0, Math.PI * 2);
-        } else if (p.type === 'jasmine') {
-          // Delicate 4-star small jasmine blossom
-          const s = p.size * 0.65;
-          ctx.arc(0, -s * 0.5, s * 0.45, 0, Math.PI * 2);
-          ctx.arc(0, s * 0.5, s * 0.45, 0, Math.PI * 2);
-          ctx.arc(-s * 0.5, 0, s * 0.45, 0, Math.PI * 2);
-          ctx.arc(s * 0.5, 0, s * 0.45, 0, Math.PI * 2);
-        } else {
-          // Teardrop Rose Petal with realistic curved contour
-          ctx.moveTo(0, 0);
-          ctx.bezierCurveTo(p.size * 0.65, -p.size * 0.5, p.size * 0.85, p.size * 0.5, 0, p.size);
-          ctx.bezierCurveTo(-p.size * 0.85, p.size * 0.5, -p.size * 0.65, -p.size * 0.5, 0, 0);
-        }
+        // 3D Perspective tumbling and rolling
+        const scaleX = Math.cos(p.flip);
+        const scaleY = Math.cos(p.roll) * 0.35 + 0.65;
+        ctx.scale(scaleX, scaleY);
 
-        ctx.fillStyle = p.color;
         ctx.globalAlpha = p.opacity;
 
-        // Subtle soft shadow underneath petal
-        if (p.type === 'jasmine') {
-          ctx.shadowColor = 'rgba(212, 175, 55, 0.45)';
+        if (p.type === 'sakura-petal') {
+          // --- SAKURA PETAL WITH SIGNATURE NOTCHED TIP ---
+          const len = p.size;
+          const w = p.size * 0.78;
+
+          // Gradient: deeper blush at the stem base, softly glowing translucent white-pink at notched tip
+          const grad = ctx.createLinearGradient(0, len * 0.48, 0, -len * 0.48);
+          grad.addColorStop(0, p.baseColor);
+          grad.addColorStop(0.42, p.midColor);
+          grad.addColorStop(1, p.tipColor);
+
+          ctx.fillStyle = grad;
+          ctx.shadowColor = 'rgba(230, 90, 120, 0.28)';
           ctx.shadowBlur = 4;
+
+          ctx.beginPath();
+          // Stem base point
+          ctx.moveTo(0, len * 0.46);
+
+          // Left curved belly up to left lobe tip
+          ctx.bezierCurveTo(-w * 0.68, len * 0.25, -w * 0.78, -len * 0.22, -w * 0.32, -len * 0.48);
+
+          // The classic Sakura notch cleft at the tip
+          ctx.quadraticCurveTo(0, -len * 0.34, w * 0.32, -len * 0.48);
+
+          // Right lobe down along right belly to stem base
+          ctx.bezierCurveTo(w * 0.78, -len * 0.22, w * 0.68, len * 0.25, 0, len * 0.46);
+          ctx.closePath();
+          ctx.fill();
+
+          // Subtle delicate inner petal crease/vein highlight
+          ctx.beginPath();
+          ctx.moveTo(0, len * 0.44);
+          ctx.lineTo(0, -len * 0.08);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
         } else {
-          ctx.shadowColor = 'rgba(80, 10, 20, 0.3)';
-          ctx.shadowBlur = 5;
+          // --- SAKURA TREE LEAF (FRESH SPRING LEAF) ---
+          const len = p.size * 1.15;
+          const w = p.size * 0.52;
+
+          const grad = ctx.createLinearGradient(0, len * 0.5, 0, -len * 0.5);
+          grad.addColorStop(0, p.baseColor);
+          grad.addColorStop(0.5, p.midColor);
+          grad.addColorStop(1, p.tipColor);
+
+          ctx.fillStyle = grad;
+          ctx.shadowColor = 'rgba(50, 80, 25, 0.25)';
+          ctx.shadowBlur = 4;
+
+          ctx.beginPath();
+          // Pointed tip at top
+          ctx.moveTo(0, -len * 0.5);
+          // Right curved side
+          ctx.bezierCurveTo(w * 0.8, -len * 0.2, w * 0.75, len * 0.28, 0, len * 0.5);
+          // Left curved side
+          ctx.bezierCurveTo(-w * 0.75, len * 0.28, -w * 0.8, -len * 0.2, 0, -len * 0.5);
+          ctx.closePath();
+          ctx.fill();
+
+          // Delicate leaf spine vein
+          ctx.beginPath();
+          ctx.moveTo(0, len * 0.48);
+          ctx.lineTo(0, -len * 0.45);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+          ctx.lineWidth = 0.75;
+          ctx.stroke();
         }
 
-        ctx.fill();
         ctx.restore();
       });
 
@@ -220,3 +292,6 @@ export const RosePetals: React.FC<{ active?: boolean }> = ({ active = true }) =>
     />
   );
 };
+
+// Also export as SakuraPetals for clarity
+export const SakuraPetals = RosePetals;
