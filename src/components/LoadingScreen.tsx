@@ -1,35 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { GaneshaSymbol } from './GaneshaSymbol';
 
 interface LoadingScreenProps {
   onLoaded: () => void;
 }
 
 const TEXTURES_TO_PRELOAD = [
-  '/assets/textures/cover_haldi.jpg',
-  '/assets/textures/cover_kahani.jpg',
   '/assets/textures/cover_patrika.jpg',
-  '/assets/textures/cover_phere.jpg',
-  '/assets/textures/cover_poshak.jpg',
-  '/assets/textures/cover_presentation.jpg',
-  '/assets/textures/cover_rsvp.jpg',
-  '/assets/textures/cover_sangeet.jpg',
-  '/assets/textures/cover_udaivilas.jpg',
-  '/assets/textures/cover_velvet_gold.jpg',
   '/assets/textures/parchment_gold_flecks.jpg',
-  '/assets/textures/spine_haldi.jpg',
-  '/assets/textures/spine_kahani.jpg',
-  '/assets/textures/spine_patrika.jpg',
-  '/assets/textures/spine_phere.jpg',
-  '/assets/textures/spine_poshak.jpg',
-  '/assets/textures/spine_rsvp.jpg',
-  '/assets/textures/spine_sangeet.jpg',
-  '/assets/textures/spine_udaivilas.jpg',
-  '/assets/textures/spine_velvet_gold.jpg',
 ];
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
   const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState('Summoning Mewar Palace Library...');
+  const [statusText, setStatusText] = useState('Preparing Sacred Wedding Library...');
   const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
@@ -40,7 +23,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
     // Track status message as percentage climbs
     const updateStatus = (pct: number) => {
       if (pct < 30) {
-        setStatusText('Summoning Mewar Palace Library...');
+        setStatusText('Preparing Sacred Wedding Library...');
       } else if (pct < 65) {
         setStatusText('Gilding Ceremonial 24K Zari Covers...');
       } else if (pct < 95) {
@@ -87,12 +70,12 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
       img.src = src;
     });
 
-    // Safety timeout: Never keep guest stuck on loading even on spotty mobile connection
+    // Safety timeout: Swift, lightweight load (< 1.2s max)
     const safetyTimer = setTimeout(() => {
       if (isMounted && progress < 100) {
         finishLoading();
       }
-    }, 4500);
+    }, 1200);
 
     return () => {
       isMounted = false;
@@ -150,11 +133,9 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
           <div className="absolute w-28 h-28 sm:w-32 sm:h-32 rounded-full border border-[#D4AF37]/40 animate-ping" />
           <div className="absolute w-32 h-32 sm:w-36 sm:h-36 rounded-full border border-[#D4AF37]/25 animate-pulse" />
 
-          {/* Central Royal Monogram Disc */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-[#D4AF37] flex items-center justify-center bg-[#FAF4E5] shadow-[0_0_30px_rgba(212,175,55,0.6)] transform hover:scale-105 transition-transform">
-            <span className="font-['Marcellus'] text-3xl sm:text-4xl font-bold gold-foil-text drop-shadow">
-              अ & इ
-            </span>
+          {/* Central Royal Ganesha Emblem Disc */}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-[#D4AF37] flex items-center justify-center bg-[#FAF4E5] shadow-[0_0_30px_rgba(212,175,55,0.6)] transform hover:scale-105 transition-transform p-2">
+            <GaneshaSymbol size={62} glow={true} />
           </div>
         </div>
 
@@ -195,7 +176,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
       {/* Bottom Heritage Seal */}
       <div className="text-center pb-6 z-10">
         <span className="font-['Marcellus'] text-[10.5px] sm:text-xs tracking-[0.25em] uppercase text-[#F5DE98]/90 font-semibold drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
-          THE OBEROI UDAIVILAS • 28–30 NOVEMBER 2026
+          5TH & 12TH DECEMBER 2026 • BAKHTAWARPUR, DELHI
         </span>
       </div>
     </div>

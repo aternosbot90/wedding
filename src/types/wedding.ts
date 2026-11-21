@@ -1,6 +1,7 @@
 /**
- * Royal Indian Wedding Data & Types
+ * Indian Wedding Data & Types
  * Abhishek weds Ishita — Shubh Vivah Patrika
+ * Invitation from Shri Vedprakash (Bakhtawarpur, Delhi)
  */
 
 export interface CeremonyEvent {
@@ -9,7 +10,8 @@ export interface CeremonyEvent {
   hindiTitle: string;
   venue: string;
   description: string;
-  attire: string;
+  attire?: string;
+  mapUrl?: string;
 }
 
 export interface IndianBookVolume {
@@ -28,13 +30,58 @@ export interface IndianBookVolume {
 
 export type WeddingBookVolume = IndianBookVolume;
 
+export const HOST_DETAILS = {
+  hostName: 'Shri Vedprakash',
+  hostHindi: 'श्री वेदप्रकाश एवं समस्त परिवार',
+  residenceAddress: '44/24, Gali No. 3, Bheem Colony, Bakhtawarpur, Delhi - 110036',
+  residenceAddressHindi: '४४/२४, गली नं ३, भीम कॉलोनी, बख्तावरपुर, दिल्ली - ११०-०३६',
+  residenceMapUrl: 'https://maps.google.com/?q=Bheem+Colony+Bakhtawarpur+Delhi+110036',
+  coupleGroom: 'Abhishek',
+  coupleBride: 'Ishita',
+  coupleHindi: 'अभिषेक संग इशिता',
+  monogram: 'अ & इ',
+  contactNumbers: ['9971006431', '9212029424', '9873185576', '9560364705'],
+  events: [
+    {
+      id: 'ring_ceremony',
+      date: '5th December 2026',
+      dateHindi: '५ दिसम्बर २०२६',
+      title: 'Ring Ceremony & Preeti Bhoj',
+      hindiTitle: 'मुद्रिका संस्कार एवं प्रीतिभोज',
+      timingCeremony: '11:00 AM',
+      timingCeremonyTitle: 'Ring Ceremony (मुद्रिका संस्कार)',
+      timingLunch: '01:00 PM',
+      timingLunchTitle: 'Preeti Bhoj / Lunch (प्रीतिभोज)',
+      venue: 'Mannat Vatika Farm',
+      venueHindi: 'मन्नत वाटिका फार्म',
+      city: 'Delhi',
+      mapUrl: 'https://maps.app.goo.gl/mrv1ZjPQXxpvmBDL6',
+    },
+    {
+      id: 'barat_wedding',
+      date: '12th December 2026',
+      dateHindi: '१२ दिसम्बर २०२६',
+      title: 'Barat & Shubh Vivah',
+      hindiTitle: 'बारात प्रस्थान एवं शुभ विवाह',
+      timingSehraBandi: '10:00 AM',
+      timingSehraBandiTitle: 'Sehra Bandi (सेहरा बंदी - निवास स्थान)',
+      timingBarat: '11:00 AM',
+      timingBaratTitle: 'Departure of Barat (बारात प्रस्थान)',
+      venue: 'Green Lounge North Banquet',
+      venueHindi: 'ग्रीन लाउंज नॉर्थ बैंक्वेट',
+      city: 'Delhi',
+      mapUrl: 'https://maps.app.goo.gl/rCGKCJWhjcMhXcaC8',
+    },
+  ],
+};
+
 export const INDIAN_VOLUMES: IndianBookVolume[] = [
   {
     id: 'patrika',
     volumeNumber: 'HEIRLOOM VOLUME',
     title: 'Shubh Vivah Patrika',
     hindiTitle: '॥ शुभ विवाह पत्रिका ॥',
-    subtitle: 'THE SACRED INVITATION',
+    subtitle: 'INVITATION FROM SHRI VEDPRAKASH',
     spineColor: '#7A1522', // Royal Sindoor Crimson
     accentColor: '#E6C665', // Zari Gold
     coverTexture: '/assets/textures/cover_patrika.jpg',
@@ -42,87 +89,51 @@ export const INDIAN_VOLUMES: IndianBookVolume[] = [
     targetSpread: 0,
   },
   {
-    id: 'kahani',
-    volumeNumber: 'VOLUME I',
-    title: 'Hamari Prem Kahani',
-    hindiTitle: 'हमारी प्रेम कहानी',
-    subtitle: 'OUR LOVE STORY & MEMORIES',
-    spineColor: '#8A3249', // Romantic Blush Rose Silk
-    accentColor: '#F2D0DF',
-    coverTexture: '/assets/textures/cover_kahani.jpg',
-    spineTexture: '/assets/textures/spine_kahani.jpg',
-    targetSpread: 1,
-  },
-  {
-    id: 'haldi',
-    volumeNumber: 'VOLUME II',
-    title: 'Haldi & Mehndi Ki Rasam',
-    hindiTitle: 'हल्दी एवं मेहंदी की रस्म',
-    subtitle: 'FLORAL BLESSINGS & DHOL',
-    spineColor: '#A36006', // Radiant Saffron Marigold
+    id: 'ring',
+    volumeNumber: 'CEREMONY I',
+    title: 'Ring Ceremony',
+    hindiTitle: 'मुद्रिका संस्कार (सगाई)',
+    subtitle: '5 DEC • MANNAT VATIKA FARM',
+    spineColor: '#A36006', // Auspicious Marigold Gold
     accentColor: '#F7DC88',
     coverTexture: '/assets/textures/cover_haldi.jpg',
     spineTexture: '/assets/textures/spine_haldi.jpg',
-    targetSpread: 2,
+    targetSpread: 1,
   },
   {
-    id: 'sangeet',
-    volumeNumber: 'VOLUME III',
-    title: 'Sangeet Sandhya',
-    hindiTitle: 'संगीत संध्या',
-    subtitle: 'A CELEBRATION OF MUSIC',
-    spineColor: '#121D3B', // Midnight Sapphire Navy Blue
-    accentColor: '#C4D7F5',
-    coverTexture: '/assets/textures/cover_sangeet.jpg',
-    spineTexture: '/assets/textures/spine_sangeet.jpg',
-    targetSpread: 3,
-  },
-  {
-    id: 'phere',
-    volumeNumber: 'VOLUME IV',
-    title: 'Saat Phere & Shubh Vivah',
-    hindiTitle: 'सात फेरे एवं शुभ विवाह',
-    subtitle: 'THE SACRED VOWS',
-    spineColor: '#8C121E', // Imperial Sindoor Maroon
+    id: 'barat',
+    volumeNumber: 'CEREMONY II',
+    title: 'Barat & Shubh Vivah',
+    hindiTitle: 'बारात एवं शुभ विवाह',
+    subtitle: '12 DEC • GREEN LOUNGE BANQUET',
+    spineColor: '#8C121E', // Imperial Crimson Maroon
     accentColor: '#F7D688',
     coverTexture: '/assets/textures/cover_phere.jpg',
     spineTexture: '/assets/textures/spine_phere.jpg',
-    targetSpread: 4,
+    targetSpread: 2,
   },
   {
-    id: 'poshak',
-    volumeNumber: 'VOLUME V',
-    title: 'Poshak & Rang (Attire)',
-    hindiTitle: 'पोशाक एवं रंग निर्देशिका',
-    subtitle: 'ROYAL PALETTE & DRESS CODE',
-    spineColor: '#143D28', // Emerald Jade Velvet
-    accentColor: '#BEE7CD',
-    coverTexture: '/assets/textures/cover_poshak.jpg',
-    spineTexture: '/assets/textures/spine_poshak.jpg',
-    targetSpread: 5,
-  },
-  {
-    id: 'udaivilas',
-    volumeNumber: 'VOLUME VI',
-    title: 'The Oberoi Udaivilas',
-    hindiTitle: 'उदयविलास एवं यात्रा विवरण',
-    subtitle: 'LAKE PICHOLA, UDAIPUR',
-    spineColor: '#10404C', // Lake Pichola Royal Teal
+    id: 'venues',
+    volumeNumber: 'VOLUME III',
+    title: 'Venues & Google Maps',
+    hindiTitle: 'स्थान निर्देशिका एवं मानचित्र',
+    subtitle: 'MANNAT VATIKA & GREEN LOUNGE',
+    spineColor: '#10404C', // Deep Heritage Teal
     accentColor: '#A6DFE8',
-    coverTexture: '/assets/textures/cover_udaivilas.jpg',
-    spineTexture: '/assets/textures/spine_udaivilas.jpg',
-    targetSpread: 6,
+    coverTexture: '/assets/textures/cover_patrika.jpg',
+    spineTexture: '/assets/textures/cover_patrika.jpg',
+    targetSpread: 3,
   },
   {
-    id: 'rsvp',
-    volumeNumber: 'VOLUME VII',
-    title: 'Shubh Sandesh & RSVP',
-    hindiTitle: 'शुभ संदेश एवं आमंत्रण स्वीकृति',
-    subtitle: 'KINDLY CONFIRM ATTENDANCE',
-    spineColor: '#751421', // Royal Crimson & Pearl Ivory
+    id: 'blessings',
+    volumeNumber: 'VOLUME IV',
+    title: 'Shubh Sandesh & Blessings',
+    hindiTitle: 'शुभकामनाएँ एवं शुभाशीष',
+    subtitle: 'WARM WISHES & BLESSINGS',
+    spineColor: '#751421', // Royal Velvet Maroon
     accentColor: '#F0D489',
-    coverTexture: '/assets/textures/cover_rsvp.jpg',
-    spineTexture: '/assets/textures/spine_rsvp.jpg',
-    targetSpread: 7,
+    coverTexture: '/assets/textures/cover_patrika.jpg',
+    spineTexture: '/assets/textures/cover_patrika.jpg',
+    targetSpread: 4,
   },
 ];
