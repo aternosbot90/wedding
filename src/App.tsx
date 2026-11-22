@@ -16,6 +16,11 @@ export default function App() {
   const [petalsActive, setPetalsActive] = useState(true);
   const activeBook: IndianBookVolume = INDIAN_VOLUMES[0];
 
+  // Automatic music play as soon as website opens
+  useEffect(() => {
+    sound.startMusic();
+  }, []);
+
   useEffect(() => {
     if (!isLoading && soundEnabled) {
       sound.startMusic();
@@ -46,11 +51,11 @@ export default function App() {
       {/* Falling Rose Petals Shower */}
       <RosePetals active={petalsActive} />
 
-      {/* THE MAIN HERO: THE OPENED WEDDING INVITATION BOOK */}
+      {/* THE MAIN HERO: THE OPENED WEDDING INVITATION BOOK (Always starts on Cover page: initialSpread={-1}) */}
       {!isLoading && (
         <main className="relative w-full h-full flex flex-col justify-between items-center z-20">
           <OpenBook
-            initialSpread={0}
+            initialSpread={-1}
             activeVolume={activeBook}
             onTriggerPetals={triggerPetalShower}
             soundEnabled={soundEnabled}

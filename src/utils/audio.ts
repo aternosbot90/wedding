@@ -56,7 +56,7 @@ class SoundEngine {
       this.bgAudio = new Audio('/assets/KAMI.mp3');
       this.bgAudio.loop = true;
       this.bgAudio.preload = 'auto';
-      this.bgAudio.volume = 0;
+      this.bgAudio.volume = 0.30;
     } catch (e) {
       console.warn('Background audio initialization error:', e);
     }
@@ -90,28 +90,18 @@ class SoundEngine {
         this.fadeInterval = null;
       }
 
-      const targetVolume = 0.45;
+      // Music volume set to exactly 30% per user request
+      const targetVolume = 0.30;
+      this.bgAudio.volume = targetVolume;
       const playPromise = this.bgAudio.play();
 
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
             this.isMusicPlaying = true;
-            // Smooth 1.2s fade-in to target volume
-            let curVol = this.bgAudio ? this.bgAudio.volume : 0;
-            const step = (targetVolume - curVol) / 12;
-            this.fadeInterval = setInterval(() => {
-              if (!this.bgAudio) {
-                if (this.fadeInterval) clearInterval(this.fadeInterval);
-                return;
-              }
-              curVol = Math.min(targetVolume, curVol + step);
-              this.bgAudio.volume = curVol;
-              if (curVol >= targetVolume) {
-                if (this.fadeInterval) clearInterval(this.fadeInterval);
-                this.fadeInterval = null;
-              }
-            }, 80);
+            if (this.bgAudio) {
+              this.bgAudio.volume = targetVolume;
+            }
           })
           .catch((err) => {
             // Autoplay policy prevented playback until user interaction
@@ -157,8 +147,13 @@ class SoundEngine {
 
 export const sound = new SoundEngine();
 
-// Auto-unlock Web Audio & start background music on first user interaction anywhere in the window
+// Automatically attempt music play on page load, plus auto-unlock on first gesture
 if (typeof window !== 'undefined') {
+  // Immediate autoplay attempt when website opens
+  setTimeout(() => {
+    sound.startMusic();
+  }, 100);
+
   const unlockAudio = () => {
     sound.initCtx();
     if (sound.enabled) {
@@ -168,10 +163,12 @@ if (typeof window !== 'undefined') {
     window.removeEventListener('keydown', unlockAudio);
     window.removeEventListener('click', unlockAudio);
     window.removeEventListener('touchstart', unlockAudio);
+    window.removeEventListener('scroll', unlockAudio);
   };
   window.addEventListener('pointerdown', unlockAudio, { once: true, passive: true });
   window.addEventListener('keydown', unlockAudio, { once: true, passive: true });
   window.addEventListener('click', unlockAudio, { once: true, passive: true });
   window.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+  window.addEventListener('scroll', unlockAudio, { once: true, passive: true });
 }
 

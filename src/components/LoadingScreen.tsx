@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GaneshaSymbol } from './GaneshaSymbol';
+import { sound } from '../utils/audio';
 
 interface LoadingScreenProps {
   onLoaded: () => void;
@@ -16,6 +17,9 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoaded }) => {
   const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
+    // Attempt automatic audio playback immediately when loading screen opens
+    sound.startMusic();
+
     let loadedCount = 0;
     const total = TEXTURES_TO_PRELOAD.length;
     let isMounted = true;
