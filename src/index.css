@@ -564,9 +564,10 @@ body {
   height: 100%;
   box-sizing: border-box;
   background-color: transparent;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y pinch-zoom;
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: auto;
+  touch-action: pan-x pan-y pinch-zoom;
   contain: paint;
 }
 
@@ -1467,21 +1468,25 @@ body {
   backface-visibility: hidden;
 }
 
-/* Ensure mobile typography is crisp, large and comfortable to read, and text NEVER gets behind bookmark */
+/* Ensure mobile typography is crisp, large and comfortable to read, with zero scrolling */
 .page-surface {
-  padding-top: max(2.5rem, 38px) !important;
+  padding-top: max(1.25rem, 20px) !important;
+  padding-bottom: max(0.5rem, 8px) !important;
+  overflow: hidden !important;
 }
 
 @media (max-width: 767px) {
   .page-surface {
-    font-size: 13.5px;
-    padding-top: max(2.75rem, 42px) !important;
+    font-size: 13px;
+    padding-top: max(0.75rem, 12px) !important;
+    padding-bottom: max(0.5rem, 8px) !important;
+    overflow: hidden !important;
   }
   
   .page-surface h1,
   .page-surface h2,
   .page-surface h3 {
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
   }
 }
 

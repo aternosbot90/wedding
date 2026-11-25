@@ -3,39 +3,20 @@
  * Royal Indian Wedding Invitation Book with 3D Realistic Page Turns
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { INDIAN_VOLUMES, IndianBookVolume } from './types/wedding';
 import { LoadingScreen } from './components/LoadingScreen';
 import { OpenBook } from './components/OpenBook';
 import { RosePetals } from './components/RosePetals';
-import { sound } from './utils/audio';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
   const [petalsActive, setPetalsActive] = useState(true);
   const activeBook: IndianBookVolume = INDIAN_VOLUMES[0];
-
-  // Automatic music play as soon as website opens
-  useEffect(() => {
-    sound.startMusic();
-  }, []);
-
-  useEffect(() => {
-    if (!isLoading && soundEnabled) {
-      sound.startMusic();
-    }
-  }, [isLoading, soundEnabled]);
 
   const triggerPetalShower = () => {
     setPetalsActive(false);
     setTimeout(() => setPetalsActive(true), 60);
-  };
-
-  const handleToggleSound = () => {
-    const nextState = !soundEnabled;
-    setSoundEnabled(nextState);
-    sound.enabled = nextState;
   };
 
   return (
@@ -58,8 +39,6 @@ export default function App() {
             initialSpread={-1}
             activeVolume={activeBook}
             onTriggerPetals={triggerPetalShower}
-            soundEnabled={soundEnabled}
-            onToggleSound={handleToggleSound}
           />
         </main>
       )}
